@@ -108,6 +108,12 @@ void ExposureTab::set_exposure() {
 
   ithread->start();
 
+  // Pause the FilterWheelTab status-poll timer for the duration of the
+  // exposure. Without this, the timer fires on the main thread and calls
+  // recv() on the shared socket while ImageThread is also calling recv(),
+  // causing a race that corrupts the message stream and hangs the GUI.
+  emit socketBusy(true);
+
   // m_cancel_button->setEnabled(false);
   m_clear_button->setEnabled(false);
   return;
@@ -203,6 +209,11 @@ void ExposureTab::serverJobDone(const QString &response) {
   }
 
   setEditable(true);
+  emit socketBusy(false); // allow FilterWheelTab timer to resume
+}
+
+void ExposureTab::setWheelBusy(bool busy) {
+  m_start_button->setEnabled(!busy);
 }
 
 int ExposureTab::make_command(char *buffer) {

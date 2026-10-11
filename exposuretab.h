@@ -57,6 +57,10 @@ private:
   QLabel *m_label;
 
 signals:
+  // Emitted true when ImageThread owns the socket, false when it finishes.
+  // Consumed by FilterWheelTab to pause/resume its status-poll timer so the
+  // two don't race on the shared socket.
+  void socketBusy(bool);
 
 private slots:
   void set_exposure();
@@ -64,6 +68,11 @@ private slots:
   void send_abort();
   void serverJobDone(const QString &);
   void serverJobUpdate(const QString &);
+
+public slots:
+  // Disables the Start button while the filter wheel is moving, so commands
+  // cannot be silently chained onto the socket.
+  void setWheelBusy(bool busy);
 };
 
 #endif // EXPOSURETAB_H

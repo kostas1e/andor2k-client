@@ -23,8 +23,17 @@ HEADERS += \
     exposuretab.h \
     tabdialog.h
 
-unix|win32: LIBS += -landor
+CONFIG(sim_only) {
+    message("------------------------------------------------------------")
+    message("Simulation mode enabled; linking against dev/mock libraries.")
+    message("------------------------------------------------------------")
+    INCLUDEPATH = ../andor2k/sim $$INCLUDEPATH
+    unix|win32: LIBS += -L../andor2k/src/.libs \
+                        -L../andor2k/sim/lib
+}
 
 unix|win32: LIBS += -lhelmosandor2k
+
+unix|win32: LIBS += -landor
 
 unix|win32: LIBS += -lcfitsio

@@ -60,3 +60,8 @@ moc_*
 .deps/
 .dirstamp
 .libs/
+
+# Simulation & Local Development
+.qmake.stash
+anguc
+helmos-andor2k

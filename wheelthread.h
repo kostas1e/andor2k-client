@@ -4,6 +4,7 @@
 #include "helmos-andor2k/cpp_socket.hpp"
 
 #include <QThread>
+#include <cerrno>
 #include <cstring>
 #include <string>
 
@@ -29,8 +30,16 @@ private:
     bool done = false;
     while (!done) {
       std::memset(buf, 0, sizeof(buf));
-      if (socket->recv(buf, sizeof(buf) - 1) < 0)
+      int n = socket->recv(buf, sizeof(buf) - 1);
+      if (n < 0) {
+        // EAGAIN / EWOULDBLOCK = SO_RCVTIMEO fired — daemon is still alive,
+        // keep waiting. Any other error (ECONNRESET etc.) = daemon is gone.
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+          continue;
         break;
+      }
+      if (n == 0)
+        break; // EOF: daemon closed connection
       if (std::strstr(buf, "done") != nullptr)
         done = true;
       else

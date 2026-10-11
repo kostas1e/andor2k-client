@@ -7,6 +7,8 @@
 #include <QThread>
 #include <cstring>
 #include "helmos-andor2k/andor2k.hpp"
+#include <sys/socket.h>
+#include <sys/time.h>
 
 using andor2k::ClientSocket;
 using andor2k::Socket;
@@ -350,6 +352,14 @@ void ConnectionTab::sock_connect() {
   std::string host = m_hostname_ledit->text().toStdString();
   try {
     *csock = new ClientSocket(host.c_str(), m_port_ledit->text().toInt());
+    // Set a recv timeout so blocking recv() calls in the main thread (e.g.
+    // update_status_loop) cannot freeze the UI indefinitely if the daemon
+    // stops responding. WheelThread handles EAGAIN by looping (see below).
+    {
+      struct timeval tv{5, 0};  // 5-second timeout
+      setsockopt((*csock)->sockid(), SOL_SOCKET, SO_RCVTIMEO,
+                 &tv, sizeof(tv));
+    }
     ghost = host;
     gport_no = m_port_ledit->text().toInt();
   } catch (std::exception &e) {

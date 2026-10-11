@@ -6,6 +6,7 @@
 #include <QButtonGroup>
 #include <QGroupBox>
 #include <QLabel>
+#include <QLineEdit>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QRadioButton>
@@ -37,6 +38,7 @@ private:
   // Left panel — slot selection
   QButtonGroup *m_slot_group;
   QRadioButton *m_slot_buttons[11];
+  QLineEdit    *m_filter_names[11];  // user-editable, persisted via QSettings
 
   // Right panel — status
   QLabel *m_conn_label;    // hardware connection state

@@ -2,15 +2,17 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QHBoxLayout>
+#include <QLineEdit>
 #include <QMessageBox>
+#include <QSettings>
 #include <QVBoxLayout>
 #include <cstring>
 
-// Slot names: index 0-10
-static const char *SLOT_NAMES[11] = {
-    "0 — Clear",   "1 — Filter 1", "2 — Filter 2", "3 — Filter 3",
-    "4 — Filter 4", "5 — Filter 5", "6 — Filter 6", "7 — Filter 7",
-    "8 — Filter 8", "9 — Filter 9", "10 — Filter 10"};
+// Default filter names used when QSettings has no saved value for a slot.
+static const char *const DEFAULT_FILTER_NAMES[11] = {
+    "Clear",
+    "Filter 1",  "Filter 2",  "Filter 3",  "Filter 4",  "Filter 5",
+    "Filter 6",  "Filter 7",  "Filter 8",  "Filter 9",  "Filter 10"};
 
 FilterWheelTab::FilterWheelTab(andor2k::ClientSocket *&sock, QWidget *parent)
     : QWidget(parent), csock(&sock) {
@@ -23,16 +25,40 @@ FilterWheelTab::FilterWheelTab(andor2k::ClientSocket *&sock, QWidget *parent)
 
 void FilterWheelTab::createGui() {
   // ── Left panel: slot selection ──────────────────────────────────────────
-  QGroupBox *slot_box = new QGroupBox(tr("Filter Slot"));
-  QVBoxLayout *slot_layout = new QVBoxLayout;
+  QGroupBox   *slot_box    = new QGroupBox(tr("Filter Slot"));
+  QGridLayout *slot_layout = new QGridLayout;
   m_slot_group = new QButtonGroup(this);
 
+  QSettings settings("Helmos", "anguc");
   for (int i = 0; i <= 10; ++i) {
-    m_slot_buttons[i] = new QRadioButton(tr(SLOT_NAMES[i]));
-    slot_layout->addWidget(m_slot_buttons[i]);
+    QString default_name = QString::fromUtf8(DEFAULT_FILTER_NAMES[i]);
+    QString saved_name   = settings.value(
+        QString("filter_names/%1").arg(i), default_name).toString();
+
+    m_slot_buttons[i] = new QRadioButton(QString::number(i));
+    m_filter_names[i] = new QLineEdit(saved_name);
+    m_filter_names[i]->setMaxLength(32);
+    m_filter_names[i]->setPlaceholderText(default_name);
+    m_filter_names[i]->setToolTip(tr("Click to rename this filter slot"));
+
+    // Persist the name whenever the user finishes editing (Enter or focus-out).
+    connect(m_filter_names[i], &QLineEdit::editingFinished,
+            this, [this, i]() {
+              QSettings s("Helmos", "anguc");
+              s.setValue(QString("filter_names/%1").arg(i),
+                         m_filter_names[i]->text());
+            });
+
+    slot_layout->addWidget(m_slot_buttons[i], i, 0);
+    slot_layout->addWidget(m_filter_names[i],  i, 1);
     m_slot_group->addButton(m_slot_buttons[i], i);
   }
   m_slot_buttons[0]->setChecked(true);
+  // Slot 0 is always "Clear" (both apertures open — no glass in beam).
+  // Its meaning is physical, not a swappable filter, so lock the name.
+  m_filter_names[0]->setReadOnly(true);
+  m_filter_names[0]->setToolTip(tr("Slot 0 is always Clear (no filter)"));
+  m_filter_names[0]->setStyleSheet("background: palette(window); color: palette(mid);");
   slot_box->setLayout(slot_layout);
 
   // ── Right panel: status + controls ──────────────────────────────────────
@@ -304,7 +330,8 @@ void FilterWheelTab::parseStatusResponse(const char *response) {
     if (fpos < 0)
       m_pos_label->setText(tr("Unknown"));
     else
-      m_pos_label->setText(QString::number(fpos));
+      m_pos_label->setText(
+          QString("%1 — %2").arg(fpos).arg(m_filter_names[fpos]->text()));
     m_moving_label->setText(tr("Idle"));
   }
   m_homed_label->setText(fhomed ? tr("Yes") : tr("No"));

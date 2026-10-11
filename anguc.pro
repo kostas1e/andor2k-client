@@ -13,15 +13,18 @@ SOURCES += \
     exposuretab.cpp \
     tabdialog.cpp \
     main.cpp \
+    filterwheeltab.cpp
 
 HEADERS += \
     advancedsettings.h \
     cliutils.h \
     settempthread.h \
     imagethread.h \
+    wheelthread.h \
     connectiontab.h \
     exposuretab.h \
-    tabdialog.h
+    tabdialog.h \
+    filterwheeltab.h
 
 CONFIG(sim_only) {
     message("------------------------------------------------------------")

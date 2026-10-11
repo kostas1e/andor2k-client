@@ -71,6 +71,7 @@ void FilterWheelTab::createGui() {
   m_moving_label  = new QLabel(tr("Idle"));
   m_upper_qc_label = new QLabel(tr("0"));
   m_lower_qc_label = new QLabel(tr("0"));
+  m_fault_label    = new QLabel(tr("—"));
 
   status_layout->addWidget(new QLabel(tr("Wheel HW:")),  0, 0);
   status_layout->addWidget(m_conn_label,                  0, 1);
@@ -84,6 +85,8 @@ void FilterWheelTab::createGui() {
   status_layout->addWidget(m_upper_qc_label,             4, 1);
   status_layout->addWidget(new QLabel(tr("Lower QC:")), 5, 0);
   status_layout->addWidget(m_lower_qc_label,             5, 1);
+  status_layout->addWidget(new QLabel(tr("Faults:")),   6, 0);
+  status_layout->addWidget(m_fault_label,                6, 1);
   status_box->setLayout(status_layout);
 
   // ── Buttons ──────────────────────────────────────────────────────────────
@@ -285,8 +288,10 @@ void FilterWheelTab::hideEvent(QHideEvent *event) {
 }
 
 void FilterWheelTab::parseStatusResponse(const char *response) {
-  // Expected: "fconnected:X;fmoving:X;fpos:N;fupper_qc:L;flower_qc:L;fhomed:X"
+  // Expected: "fconnected:X;fmoving:X;fpos:N;fupper_qc:L;flower_qc:L;fhomed:X;
+  //            fupper_fault:X;flower_fault:X"
   int fconnected = 1, fmoving = 0, fpos = -1, fhomed = 0;
+  int fupper_fault = 0, flower_fault = 0;
   long fupper_qc = 0, flower_qc = 0;
 
   const char *p = response;
@@ -303,6 +308,10 @@ void FilterWheelTab::parseStatusResponse(const char *response) {
       flower_qc = std::strtol(p + 10, nullptr, 10);
     } else if (std::strncmp(p, "fhomed:", 7) == 0) {
       fhomed = std::strtol(p + 7, nullptr, 10);
+    } else if (std::strncmp(p, "fupper_fault:", 13) == 0) {
+      fupper_fault = std::strtol(p + 13, nullptr, 10);
+    } else if (std::strncmp(p, "flower_fault:", 13) == 0) {
+      flower_fault = std::strtol(p + 13, nullptr, 10);
     }
     p = std::strchr(p, ';');
     if (p) ++p;
@@ -317,6 +326,8 @@ void FilterWheelTab::parseStatusResponse(const char *response) {
     m_pos_label->setText(tr("—"));
     m_homed_label->setText(tr("No"));
     m_moving_label->setText(tr("Idle"));
+    m_fault_label->setText(tr("—"));
+    m_fault_label->setStyleSheet("");
     return;
   }
   m_conn_label->setText(tr("OK"));
@@ -337,6 +348,21 @@ void FilterWheelTab::parseStatusResponse(const char *response) {
   m_homed_label->setText(fhomed ? tr("Yes") : tr("No"));
   m_upper_qc_label->setText(QString::number(fupper_qc));
   m_lower_qc_label->setText(QString::number(flower_qc));
+
+  // Fault state
+  if (fupper_fault && flower_fault) {
+    m_fault_label->setText(tr("Both drives"));
+    m_fault_label->setStyleSheet("color: red; font-weight: bold;");
+  } else if (fupper_fault) {
+    m_fault_label->setText(tr("Upper"));
+    m_fault_label->setStyleSheet("color: red; font-weight: bold;");
+  } else if (flower_fault) {
+    m_fault_label->setText(tr("Lower"));
+    m_fault_label->setStyleSheet("color: red; font-weight: bold;");
+  } else {
+    m_fault_label->setText(tr("None"));
+    m_fault_label->setStyleSheet("");
+  }
 
   // Stop is always available when the hardware is connected.
   m_stop_button->setEnabled(true);

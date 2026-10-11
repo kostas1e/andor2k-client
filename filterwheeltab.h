@@ -47,6 +47,7 @@ private:
   QLabel *m_moving_label;
   QLabel *m_upper_qc_label;
   QLabel *m_lower_qc_label;
+  QLabel *m_fault_label;    // drive fault state (fupper_fault / flower_fault)
   QProgressBar *m_progress; // indeterminate, shown while move is in flight
 
   // Control buttons
